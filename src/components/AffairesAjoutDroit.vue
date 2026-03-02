@@ -68,12 +68,9 @@
                     <v-row v-if="idUniteChoisi > 0">
                         <v-col cols="auto" class="d-flex align-center ga-2">Unité : {{ libelleUnite }}</v-col>
                     </v-row>
-                    <v-row
-                        v-if="idTypeAffaireChoisi !== null && idTypeDroit > 0 && (idUniteChoisi > 0 || idEmployeChoisi > 0)">
-                    </v-row>
                     <v-row>
                         <v-col cols="auto"
-                            v-if="idTypeAffaireChoisi !== null && idTypeDroit > 0 && (idUniteChoisi > 0 || idEmployeChoisi > 0)">
+                            v-if="idTypeAffaireChoisi !== null && idTypeDroit > 0 && (idUniteChoisi > 0 || idEmployeChoisi > 0) && (inclureEnCours || inclureEnSuspens || inclureTermine)">
                             <v-btn color="red" @click="sauver">Sauver</v-btn>
                         </v-col>
                         <v-col cols="auto"
@@ -208,7 +205,7 @@ const reinitialiser = (): void => {
 }
 
 const sauver = (): void => {
-    if (idTypeAffaireChoisi.value !== null && (idEmployeChoisi.value > 0 || idUniteChoisi.value > 0) && idTypeDroit.value > 0  && (inclureEnCours || inclureEnSuspens || inclureTermine)) {
+    if (idTypeAffaireChoisi.value !== null && (idEmployeChoisi.value > 0 || idUniteChoisi.value > 0) && idTypeDroit.value > 0 && (inclureEnCours.value || inclureEnSuspens.value || inclureTermine.value)) {
         const typeDroit = listeTypesDroit.value.find(d => d.id === idTypeDroit.value)?.libelle
         const libelleAction: string = `Ajout pour toutes les affaires du type ${typeAffaire.value} du droit ${typeDroit} pour ${libelleEmploye.value}${libelleUnite.value}` 
         console.log('todo...', libelleAction)
