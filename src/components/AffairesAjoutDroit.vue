@@ -7,7 +7,7 @@
         <v-main>
             <v-app-bar color="primary" prominent density="compact" app>
                 <v-toolbar-title>Ajout droit sur toutes les affaires d'un type donné&nbsp;<small>(version {{ version
-                        }})</small></v-toolbar-title>
+                }})</small></v-toolbar-title>
                 <v-spacer></v-spacer>
                 <div style="position: absolute; right: 16px;">
                     Utilisateur: {{ callerInformation?.prenom }} {{ callerInformation?.nom }} ({{
@@ -57,8 +57,31 @@
                         </v-col>
                     </v-row>
                     <v-row>
+                        <v-col cols="auto" style="min-width: 250px;">
+                            <v-select v-model="idTypeDroit" :items="listeTypesDroit" item-title="libelle"
+                                item-value="id" label="Type de droit" />
+                        </v-col>
+                    </v-row>
+                    <v-row v-if="idEmployeChoisi > 0">
+                        <v-col cols="auto" class="d-flex align-center ga-2">Employe : {{ libelleEmploye }}</v-col>
+                    </v-row>
+                    <v-row v-if="idUniteChoisi > 0">
+                        <v-col cols="auto" class="d-flex align-center ga-2">Unité : {{ libelleUnite }}</v-col>
+                    </v-row>
+                    <v-row
+                        v-if="idTypeAffaireChoisi !== null && idTypeDroit > 0 && (idUniteChoisi > 0 || idEmployeChoisi > 0)">
+                    </v-row>
+                    <v-row>
+                        <v-col cols="auto"
+                            v-if="idTypeAffaireChoisi !== null && idTypeDroit > 0 && (idUniteChoisi > 0 || idEmployeChoisi > 0)">
+                            <v-btn color="red" @click="sauver">Sauver</v-btn>
+                        </v-col>
+                        <v-col cols="auto"
+                            v-if="idTypeAffaireChoisi !== null && idTypeDroit > 0 && (idUniteChoisi > 0 || idEmployeChoisi > 0)">
+                            <v-btn color="primary" @click="reinitialiser">Réinitialiser sans sauver</v-btn>
+                        </v-col>
                         <v-col cols="auto">
-                            <v-btn color="primary" @click="choisirEmploye">Choix d'un employé</v-btn>
+                            <v-btn color="primary" @click="dialogChoixEmp = true">Choix d'un employé</v-btn>
                         </v-col>
                         <v-col cols="auto">
                             <v-btn color="primary" @click="dialogChoixUO = true">Choix d'une unité</v-btn>
@@ -69,38 +92,48 @@
         </v-main>
     </v-app>
 
-<v-dialog v-model="dialogChoixUO" max-width="1280">
-    <v-card>
-      <v-card-text>
-        <Suspense>
-          <UniteOrgChoix :ssServer="ssServer" :modeChoix="modeChoixUO" @choixUniteOrg="receptionUniteOrg">
-          </UniteOrgChoix>
-        </Suspense>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer></v-spacer>
-        <v-btn text="Fermer" @click="closeChoixUO()"></v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+    <v-dialog v-model="dialogChoixEmp" max-width="1280">
+        <v-card>
+            <v-card-text>
+                <EmployeChoix :ssServer="ssServer" @choixEmploye="receptionEmploye" :modeChoix="modeChoixEmp">
+                </EmployeChoix>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text="Fermer" @click="closeChoixEmp()"></v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="dialogChoixUO" max-width="1280">
+        <v-card>
+            <v-card-text>
+                <Suspense>
+                    <UniteOrgChoix :ssServer="ssServer" :modeChoix="modeChoixUO" @choixUniteOrg="receptionUniteOrg">
+                    </UniteOrgChoix>
+                </Suspense>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text="Fermer" @click="closeChoixUO()"></v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 </template>
 
 <script setup lang="ts">
 import type { ApiResponseUI, UserInfo } from './CallerInfo.vue'
 import type { ApiResponseIG } from './CallerIsInGroup.vue'
 import type { TypeAffaireData, ApiResponseTAD, ApiResponse } from '@/axioscalls.ts'
-import { ref } from 'vue'
+import type { TypeDroit, ApiResponseTD } from '@/axioscalls.ts'
+import { onMounted, ref } from 'vue'
 import packageJson from '../../package.json'
-//import CallerInfo from './CallerInfo.vue';
-//import CallerIsInGroup from './CallerIsInGroup.vue';
-//import TypesAffaireListeChoix from './TypesAffaireListeChoix.vue';
-//import UniteOrgChoix from './UniteOrgChoix.vue';
-import { getTypeAffaireData } from '@/axioscalls.ts'
+import { getDicoAffaireDroitEmpUO, getTypeAffaireData } from '@/axioscalls.ts'
 
 interface UOChoisie {
-  id: number
-  nom: string
-  description?: string
+    id: number
+    nom: string
+    description?: string
 }
 
 const version = ref<string>(packageJson.version)
@@ -113,13 +146,16 @@ const callerInformation = ref<UserInfo | null | undefined>(null)
 const bGoelandManager = ref<boolean>(false)
 
 const idTypeAffaireChoisi = ref<number | null>(null)
+const dialogChoixEmp = ref<boolean>(false)
 const dialogChoixUO = ref<boolean>(false)
 const modeChoixUO = ref<string>('unique')
+const modeChoixEmp = ref<string>('unique')
 const ssServer = ref<string>('')
 if (import.meta.env.DEV) {
     ssServer.value = 'https://mygolux.lausanne.ch'
 }
 const ssPage: string = '/goeland/gestion_spec/affaires_ajoutdroit/axios/typeaffaire_data.php'
+const ssPageDicoDroit: string = '/goeland/gestion_spec/affaire_datainitgestion/axios/affaire_dicodroiteo.php'
 const ssPageSauve: string = '/goeland/gestion_spec/affaires_ajoutdroit/axios/affaires_ajoutdroit.php'
 
 const typeAffaire = ref<string>('')
@@ -129,6 +165,25 @@ const nbrAffairesEnSuspens = ref<number>(0)
 const inclureEnSuspens = ref<boolean>(true)
 const nbrAffairesTermine = ref<number>(0)
 const inclureTermine = ref<boolean>(false)
+const listeTypesDroit = ref<TypeDroit[]>([])
+const idTypeDroit = ref<number>(0)
+const idEmployeChoisi = ref<number>(0)
+const idUniteChoisi = ref<number>(0)
+const libelleEmploye = ref<string>('')
+const libelleUnite = ref<string>('')
+
+onMounted(async () => {
+    const response: ApiResponseTD = await getDicoAffaireDroitEmpUO(ssServer.value, ssPageDicoDroit)
+    if (response.data !== undefined) {
+        const typesDroit: TypeDroit[] = response.data
+        listeTypesDroit.value = [
+            { id: 0, libelle: '- Choisir le type de droit -' },
+            ...typesDroit,
+        ]
+    } else {
+        messageErreur.value += `${response.message}\n`
+    }
+})
 
 const dataTypeAffaire = async (idTypeAffaire: number): Promise<void> => {
     const response: ApiResponseTAD = await getTypeAffaireData(ssServer.value, ssPage, idTypeAffaire)
@@ -144,12 +199,28 @@ const dataTypeAffaire = async (idTypeAffaire: number): Promise<void> => {
     nbrAffairesEnCours.value = response.data?.[0]?.nbraffairesencours as number
     nbrAffairesEnSuspens.value = response.data?.[0]?.nbraffairesensuspens as number
     nbrAffairesTermine.value = response.data?.[0]?.nbraffairestermine as number
+}
 
+const reinitialiser = (): void => {
+    idEmployeChoisi.value = 0
+    idUniteChoisi.value = 0
+    idTypeDroit.value = 0
+}
 
+const sauver = (): void => {
+    if (idTypeAffaireChoisi.value !== null && (idEmployeChoisi.value > 0 || idUniteChoisi.value > 0) && idTypeDroit.value > 0  && (inclureEnCours || inclureEnSuspens || inclureTermine)) {
+        const typeDroit = listeTypesDroit.value.find(d => d.id === idTypeDroit.value)?.libelle
+        const libelleAction: string = `Ajout pour toutes les affaires du type ${typeAffaire.value} du droit ${typeDroit} pour ${libelleEmploye.value}${libelleUnite.value}` 
+        console.log('todo...', libelleAction)
+    }
+}
+
+const closeChoixEmp = (): void => {
+    dialogChoixEmp.value = false
 }
 
 const closeChoixUO = (): void => {
-  dialogChoixUO.value = false
+    dialogChoixUO.value = false
 }
 
 const receptionTypeAffaire = (idTypeAffaire: number, jsonData: string) => {
@@ -162,30 +233,34 @@ const receptionTypeAffaire = (idTypeAffaire: number, jsonData: string) => {
     }
 }
 
+const receptionEmploye = (jsonData: string) => {
+    dialogChoixEmp.value = false
+    console.log(`Réception employé json: ${jsonData}`)
+    const oEmploye = JSON.parse(jsonData)
+    let aEmployes = []
+    if (Array.isArray(oEmploye)) {
+        aEmployes = oEmploye
+    } else {
+        aEmployes.push(oEmploye)
+    }
+    //Pour le moment choix unique exclusivement
+    idUniteChoisi.value = 0
+    libelleUnite.value = ''
+    idEmployeChoisi.value = aEmployes[0].idemploye
+    libelleEmploye.value = `${aEmployes[0].nom} ${aEmployes[0].prenom} (${aEmployes[0].login}). ${aEmployes[0].unitetree}`
+}
+
 const receptionUniteOrg = (jsonData: string) => {
-  dialogChoixUO.value = false
-  if (modeChoixUO.value == 'unique') { jsonData = `[${jsonData}]` }
-  const uoChoisie: UOChoisie[] = JSON.parse(jsonData)
-  console.log(jsonData)
-  uoChoisie.forEach(async (item: UOChoisie) => {
-    if (idTypeAffaireChoisi.value !== null) {
-    /*
-      const oData: DataSauve = {
-        action: 'sauve',
-        idtypeaffaire: idTypeAffaireChoisi.value,
-        iduniteorg: item.id
-      }
-      const response: ApiResponse<[]> = await sauveTypeAffaireOrgunitCreation(ssServer.value, ssPageSauve, JSON.stringify(oData))
-      if (response.success === false) {
-        messageErreur.value += `${response.message}\n`
-        erreurSauve = true
-      } else {
-        erreurSauve = false
-      }
-      //listeUniteOrgCre(idTypeAffaireChoisi.value)
-      */
-    }      
-  })
+    dialogChoixUO.value = false
+    if (modeChoixUO.value == 'unique') { jsonData = `[${jsonData}]` }
+    const uoChoisie: UOChoisie[] = JSON.parse(jsonData)
+    //Pour le moment choix unique exclusivement
+    if (uoChoisie[0] !== undefined) {
+        idUniteChoisi.value = uoChoisie[0].id
+        libelleUnite.value = uoChoisie[0].description ?? ''
+        idEmployeChoisi.value = 0
+        libelleEmploye.value = ''
+    }
 }
 
 const receptionCallerInfo = (jsonData: string) => {

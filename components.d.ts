@@ -14,6 +14,7 @@ declare module 'vue' {
     AffairesAjoutDroit: typeof import('./src/components/AffairesAjoutDroit.vue')['default']
     CallerInfo: typeof import('./src/components/CallerInfo.vue')['default']
     CallerIsInGroup: typeof import('./src/components/CallerIsInGroup.vue')['default']
+    EmployeChoix: typeof import('./src/components/EmployeChoix.vue')['default']
     TypesAffaireListeChoix: typeof import('./src/components/TypesAffaireListeChoix.vue')['default']
     UniteOrgChoix: typeof import('./src/components/UniteOrgChoix.vue')['default']
     UniteOrgNode: typeof import('./src/components/UniteOrgNode.vue')['default']

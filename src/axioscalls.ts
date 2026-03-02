@@ -5,6 +5,10 @@ export interface TypeAffaire {
     typeaffaire: string
     bactif: number
 }
+export interface TypeDroit {
+    id: number
+    libelle: string
+}
 export interface TypeAffaireData {
     idtypeaffaire: number
     typeaffaire: string
@@ -17,6 +21,11 @@ export interface ApiResponseTAL {
     success?: boolean
     message?: string
     data?: TypeAffaire[]
+}
+export interface ApiResponseTD {
+    success?: boolean
+    message?: string
+    data?: TypeDroit[]
 }
 export interface ApiResponseTAD {
     success?: boolean
@@ -36,6 +45,22 @@ export interface ApiResponseUOL {
     success?: boolean;
     message?: string;
     data?: UniteOrganisationnelle[];
+}
+export interface Employe {
+  idemploye: number
+  nom: string
+  prenom: string
+  bactif: number
+  login?: string
+  unite?: string
+  directionabr?: string
+  serviceabr?: string
+  unitetree?: string
+}
+export interface ApiResponseEL {
+  success: boolean
+  message: string
+  data?: Employe[]
 }
 // Interface générique pour les réponses API
 export interface ApiResponse<T> {
@@ -60,6 +85,21 @@ export async function getTypesAffaireListe(server: string = '', page: string): P
     }
 }
 
+export async function getDicoAffaireDroitEmpUO(server: string = '', page: string): Promise<ApiResponseTD> {
+    const urltal: string = `${server}${page}`
+    try {
+        const response: AxiosResponse<TypeDroit[]> = await axios.get(urltal)
+        const respData: ApiResponseTD = {
+            "success": true,
+            "message": `ok`,
+            "data": response.data
+        }
+        console.log(respData)
+        return respData
+    } catch (error) {
+        return traiteAxiosError(error as AxiosError)
+    }
+}
 export async function getTypeAffaireData(server: string = '', page: string, idtypeaffaire: number): Promise<ApiResponseTAD> {
     const urltaol: string = `${server}${page}`
     const params = new URLSearchParams([['idtypeaffaire', idtypeaffaire.toString()]])
@@ -75,6 +115,24 @@ export async function getTypeAffaireData(server: string = '', page: string, idty
     } catch (error) {
         return traiteAxiosError(error as AxiosError)
     }
+}
+
+export async function getEmployesListe(server: string = '', page: string, jsonCriteres: string = '{}'): Promise<ApiResponseEL> {
+  if (import.meta.env.DEV) {console.log(jsonCriteres)}
+  const url: string = `${server}${page}`
+  const params = new URLSearchParams([['jsoncriteres', jsonCriteres]])
+  try {
+    const response: AxiosResponse<Employe[]> = await axios.get(url, { params })
+    const respData: ApiResponseEL = {
+      "success": true,
+      "message": `ok`,
+      "data": response.data
+    }
+    if (import.meta.env.DEV) {console.log(respData)}
+    return respData
+  } catch (error) {
+    return traiteAxiosError(error as AxiosError)
+  }
 }
 
 export async function getUnitesOrgListe(server: string = '', page: string, jsonCriteres: string = '{}'): Promise<ApiResponseUOL> {
