@@ -7,7 +7,7 @@
         <v-main>
             <v-app-bar color="primary" prominent density="compact" app>
                 <v-toolbar-title>Ajout droit sur toutes les affaires d'un type donné&nbsp;<small>(version {{ version
-                }})</small></v-toolbar-title>
+                        }})</small></v-toolbar-title>
                 <v-spacer></v-spacer>
                 <div style="position: absolute; right: 16px;">
                     Utilisateur: {{ callerInformation?.prenom }} {{ callerInformation?.nom }} ({{
@@ -15,7 +15,6 @@
                 </div>
             </v-app-bar>
             <div v-if="messageErreur != ''" id="divErreur">{{ messageErreur }}</div>
-            <div v-if="message != ''" id="divMessage">{{ message }}</div>
             <div v-if="bGoelandManager">
                 <suspense>
                     <TypesAffaireListeChoix @choixTypeAffaire="receptionTypeAffaire"></TypesAffaireListeChoix>
@@ -86,6 +85,7 @@
                     </v-row>
                 </v-container>
             </div>
+            <div v-if="message != ''" id="divMessage">{{ message }}</div>
         </v-main>
     </v-app>
 
@@ -125,12 +125,21 @@ import type { TypeAffaireData, ApiResponseTAD, ApiResponse } from '@/axioscalls.
 import type { TypeDroit, ApiResponseTD } from '@/axioscalls.ts'
 import { onMounted, ref } from 'vue'
 import packageJson from '../../package.json'
-import { getDicoAffaireDroitEmpUO, getTypeAffaireData } from '@/axioscalls.ts'
+import { getDicoAffaireDroitEmpUO, getTypeAffaireData, sauveAffairesAjoutDroit } from '@/axioscalls.ts'
 
 interface UOChoisie {
     id: number
     nom: string
     description?: string
+}
+interface DataSauve {
+    idtypeaffaire: number
+    idtypedroit: number
+    uniteouemploye: 'E' | 'O'
+    iduniteouemploye: number
+    baffaireencours: number
+    baffaireensuspens: number
+    baffairetermine: number
 }
 
 const version = ref<string>(packageJson.version)
@@ -153,7 +162,7 @@ if (import.meta.env.DEV) {
 }
 const ssPage: string = '/goeland/gestion_spec/affaires_ajoutdroit/axios/typeaffaire_data.php'
 const ssPageDicoDroit: string = '/goeland/gestion_spec/affaire_datainitgestion/axios/affaire_dicodroiteo.php'
-const ssPageSauve: string = '/goeland/gestion_spec/affaires_ajoutdroit/axios/affaires_ajoutdroit.php'
+const ssPageSauve: string = '/goeland/gestion_spec/affaires_ajoutdroit/axios/affaires_ajoutdroit_sauve.php'
 
 const typeAffaire = ref<string>('')
 const nbrAffairesEnCours = ref<number>(0)
@@ -204,11 +213,72 @@ const reinitialiser = (): void => {
     idTypeDroit.value = 0
 }
 
-const sauver = (): void => {
+const sauver = async (): Promise<void> => {
     if (idTypeAffaireChoisi.value !== null && (idEmployeChoisi.value > 0 || idUniteChoisi.value > 0) && idTypeDroit.value > 0 && (inclureEnCours.value || inclureEnSuspens.value || inclureTermine.value)) {
         const typeDroit = listeTypesDroit.value.find(d => d.id === idTypeDroit.value)?.libelle
-        const libelleAction: string = `Ajout pour toutes les affaires du type ${typeAffaire.value} du droit ${typeDroit} pour ${libelleEmploye.value}${libelleUnite.value}` 
-        console.log('todo...', libelleAction)
+        let statutAffaires: string = ''
+        if (inclureEnCours.value) {
+            statutAffaires += 'en cours'
+        }
+        if (inclureEnSuspens.value) {
+            if (statutAffaires !== '') { statutAffaires += ', ' }
+            statutAffaires += 'en suspens'
+        }
+        if (inclureTermine.value) {
+            if (statutAffaires !== '') { statutAffaires += ', ' }
+            statutAffaires += 'terminées'
+        }
+        message.value = `Ajout pour toutes les affaires ${statutAffaires} du type ${typeAffaire.value} du droit ${typeDroit} pour ${libelleEmploye.value}${libelleUnite.value}`
+        let uniteOuEmploye: 'E' | 'O'
+        let idUniteOuEmploye: number
+        let bAffaireEnCours: number, bAffaireEnSuspens: number, bAffaireTermine: number
+        if (idEmployeChoisi.value > 0) {
+            uniteOuEmploye = 'E'
+            idUniteOuEmploye = idEmployeChoisi.value
+        } else {
+            uniteOuEmploye = 'O'
+            idUniteOuEmploye = idUniteChoisi.value
+        }
+        if (inclureEnCours.value) {
+            bAffaireEnCours = 1
+        } else {
+            bAffaireEnCours = 0
+        }
+        if (inclureEnSuspens.value) {
+            bAffaireEnSuspens = 1
+        } else {
+            bAffaireEnSuspens = 0
+        }
+        if (inclureTermine.value) {
+            bAffaireTermine = 1
+        } else {
+            bAffaireTermine = 0
+        }
+        const oData: DataSauve = {
+            idtypeaffaire: idTypeAffaireChoisi.value,
+            idtypedroit: idTypeDroit.value,
+            uniteouemploye: uniteOuEmploye,
+            iduniteouemploye: idUniteOuEmploye,
+            baffaireencours: bAffaireEnCours,
+            baffaireensuspens: bAffaireEnSuspens,
+            baffairetermine: bAffaireTermine
+        }
+
+        const response: ApiResponse<string> = await sauveAffairesAjoutDroit(ssServer.value, ssPageSauve, JSON.stringify(oData))
+            console.log(response)
+            if (response.success === false) {
+            messageErreur.value += `${response.message}\n`
+            erreurSauve = true
+        } else {
+            erreurSauve = false
+        }
+
+
+
+
+
+
+        reinitialiser()
     }
 }
 
@@ -277,3 +347,32 @@ const receptionCallerInGroupGoelandManager = (jsonData: string) => {
     }
 }
 </script>
+
+<style scoped>
+#divErreur {
+    background-color: lightsalmon;
+    margin-left: 5px;
+    margin-right: 5px;
+    margin-top: 0px;
+    padding: 5px;
+    border-style: solid;
+    border-width: thin;
+    border-color: black;
+    border-radius: 20px;
+    white-space: pre-line;
+    /* Convertit les \n en sauts de ligne */
+}
+
+#divMessage {
+    margin-left: 5px;
+    margin-right: 5px;
+    margin-top: 0px;
+    padding: 5px;
+    border-style: solid;
+    border-width: thin;
+    border-color: black;
+    border-radius: 20px;
+    white-space: pre-line;
+    /* Convertit les \n en sauts de ligne */
+}
+</style>

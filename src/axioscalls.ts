@@ -78,7 +78,7 @@ export async function getTypesAffaireListe(server: string = '', page: string): P
             "message": `ok`,
             "data": response.data
         }
-        console.log(respData)
+        //console.log(respData)
         return respData
     } catch (error) {
         return traiteAxiosError(error as AxiosError)
@@ -94,7 +94,7 @@ export async function getDicoAffaireDroitEmpUO(server: string = '', page: string
             "message": `ok`,
             "data": response.data
         }
-        console.log(respData)
+        //console.log(respData)
         return respData
     } catch (error) {
         return traiteAxiosError(error as AxiosError)
@@ -153,9 +153,18 @@ export async function getUnitesOrgListe(server: string = '', page: string, jsonC
     }
 }
 
-export async function sauveTypeAffaireOrgunitCreation(server: string = '', page: string, jsonData: string = '{}'): Promise<ApiResponse<[]>> {
+export async function sauveAffairesAjoutDroit(server: string = '', page: string, jsonData: string = '{}'): Promise<ApiResponse<string>> {
     const url: string = `${server}${page}`
-    console.log(`sauveTypeAffaireOrgunitCreation: url: ${url} data: ${jsonData}`)
+    console.log(`sauveAffairesAjoutDroit: url: ${url} data: ${jsonData}`)
+    /*
+    const respData: ApiResponse<string> = {
+      "success": true,
+      "message": `ok`,
+      "data": ['salut']
+    }
+    return respData
+    */
+
     try {
         const response: AxiosResponse = await axios.post(url, jsonData, {
             headers: {
@@ -167,6 +176,7 @@ export async function sauveTypeAffaireOrgunitCreation(server: string = '', page:
     } catch (error) {
         return traiteAxiosError(error as AxiosError)
     }
+
 }
 
 function traiteAxiosError<T>(error: AxiosError): ApiResponse<T> {
