@@ -7,7 +7,7 @@
         <v-main>
             <v-app-bar color="primary" prominent density="compact" app>
                 <v-toolbar-title>Ajout droit sur toutes les affaires d'un type donné&nbsp;<small>(version {{ version
-                        }})</small></v-toolbar-title>
+                }})</small></v-toolbar-title>
                 <v-spacer></v-spacer>
                 <div style="position: absolute; right: 16px;">
                     Utilisateur: {{ callerInformation?.prenom }} {{ callerInformation?.nom }} ({{
@@ -85,7 +85,7 @@
                     </v-row>
                 </v-container>
             </div>
-            <div v-if="message != ''" id="divMessage">{{ message }}</div>
+            <div v-if="messageInfo != ''" id="divMessage">{{ messageInfo }}</div>
         </v-main>
     </v-app>
 
@@ -144,7 +144,7 @@ interface DataSauve {
 
 const version = ref<string>(packageJson.version)
 const messageErreur = ref<string | undefined>('')
-const message = ref<string>('')
+const messageInfo = ref<string>('')
 let erreurSauve: boolean = false
 
 //Data caller et droits caller
@@ -228,7 +228,7 @@ const sauver = async (): Promise<void> => {
             if (statutAffaires !== '') { statutAffaires += ', ' }
             statutAffaires += 'terminées'
         }
-        message.value = `Ajout pour toutes les affaires ${statutAffaires} du type ${typeAffaire.value} du droit ${typeDroit} pour ${libelleEmploye.value}${libelleUnite.value}`
+        messageInfo.value = `Ajout pour toutes les affaires ${statutAffaires} du type ${typeAffaire.value} du droit ${typeDroit} pour ${libelleEmploye.value}${libelleUnite.value}`
         let uniteOuEmploye: 'E' | 'O'
         let idUniteOuEmploye: number
         let bAffaireEnCours: number, bAffaireEnSuspens: number, bAffaireTermine: number
@@ -265,18 +265,13 @@ const sauver = async (): Promise<void> => {
         }
 
         const response: ApiResponse<string> = await sauveAffairesAjoutDroit(ssServer.value, ssPageSauve, JSON.stringify(oData))
-            console.log(response)
-            if (response.success === false) {
+        if (response.success === false) {
             messageErreur.value += `${response.message}\n`
             erreurSauve = true
         } else {
+            messageInfo.value += `\n${response.message}`
             erreurSauve = false
         }
-
-
-
-
-
 
         reinitialiser()
     }
