@@ -264,7 +264,7 @@ const sauver = async (): Promise<void> => {
             baffairetermine: bAffaireTermine
         }
 
-        const response: ApiResponse<string> = await sauveAffairesAjoutDroit(ssServer.value, ssPageSauve, JSON.stringify(oData))
+         const response: ApiResponse<string> = await sauveAffairesAjoutDroit(ssServer.value, ssPageSauve, JSON.stringify(oData))
         if (response.success === false) {
             messageErreur.value += `${response.message}\n`
             erreurSauve = true

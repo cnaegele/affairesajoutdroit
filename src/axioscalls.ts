@@ -155,17 +155,8 @@ export async function getUnitesOrgListe(server: string = '', page: string, jsonC
 
 export async function sauveAffairesAjoutDroit(server: string = '', page: string, jsonData: string = '{}'): Promise<ApiResponse<string>> {
     const url: string = `${server}${page}`
-    console.log(`sauveAffairesAjoutDroit: url: ${url} data: ${jsonData}`)
-    /*
-    const respData: ApiResponse<string> = {
-      "success": true,
-      "message": `ok`,
-      "data": ['salut']
-    }
-    return respData
-    */
-
-    try {
+    //console.log(`sauveAffairesAjoutDroit: url: ${url} data: ${jsonData}`)
+     try {
         const response: AxiosResponse = await axios.post(url, jsonData, {
             headers: {
                 'Content-Type': 'application/json'
